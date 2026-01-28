@@ -7,7 +7,10 @@ import com.codeit.security.config.security.security.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -15,6 +18,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @RequiredArgsConstructor
+@EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final RequsetLoggingFilter requsetLoggingFilter;
@@ -30,14 +35,31 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, RoleHierarchy roleHierarchy) throws Exception {
 
         http     //인증 필터 로깅 동적잔에 필터 추가  UsernamePasswordAuthenticationFilter.class 시큐리티 가본
                 .addFilterBefore(requsetIdFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(ipCheckFilter,RequsetIdFilter.class)
                 .addFilterAfter(requsetLoggingFilter, IpCheckFilter.class)
                 .authorizeHttpRequests(auth->auth
-                .requestMatchers("/","/h2-console/**","/signup","/css/**","/js/**").permitAll()
+                 // 공개 접근 (인증 불필여 )
+                 //.anonymous()로그인하지 않은 사용자만 허용
+                .requestMatchers("/","/signup","/login").permitAll()
+                .requestMatchers("/css/**","/js/**","/public/**").permitAll()
+                .requestMatchers("/h2-console/**").permitAll()
+
+                 //ADMIN 권한 필
+                 //hasRole("ADMIN")" :"ROLE_ADMIN" 권한확인 -> 보통이넘을확용
+                 //hasAuthority("ROLE_ADMIN"): 정확히 롤 언더바확인
+           //     .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                //MANAGER또는 ADMIN 권한 필요
+                .requestMatchers("/manager/**").hasAnyRole("MANAGER","ADMIN")
+
+                 //USER권한필요
+                .requestMatchers("/user/**").hasRole("USER")
+
+                 //나머지 인증만 필요 (권한무관)
                 .anyRequest().authenticated()
                 )
                 //폼설정은 rest에서 사용안해
