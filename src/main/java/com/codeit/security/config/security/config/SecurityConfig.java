@@ -46,6 +46,7 @@ public class SecurityConfig {
                         .permitAll())
                 .logout(logout->logout
                         .logoutUrl("/logout")
+                        .deleteCookies("JSESSIONID")// 이넘이?
                         .permitAll())
                 //csrf도 사용하지않는다
                 .csrf(csrf->csrf.ignoringRequestMatchers("/h2-console/**"))
