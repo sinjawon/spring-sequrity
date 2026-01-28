@@ -3,6 +3,8 @@ package com.codeit.security.config.security.config;
 import com.codeit.security.config.security.filtrt.IpCheckFilter;
 import com.codeit.security.config.security.filtrt.RequsetIdFilter;
 import com.codeit.security.config.security.filtrt.RequsetLoggingFilter;
+import com.codeit.security.config.security.security.CustomAccessDeniedHandler;
+import com.codeit.security.config.security.security.CustomAuthenticationEntryPoint;
 import com.codeit.security.config.security.security.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -35,7 +37,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, RoleHierarchy roleHierarchy) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           RoleHierarchy roleHierarchy,
+                                           CustomAccessDeniedHandler accessDeniedHandler,
+                                           CustomAuthenticationEntryPoint customAuthenticationEntryPoint) throws Exception {
 
         http     //인증 필터 로깅 동적잔에 필터 추가  UsernamePasswordAuthenticationFilter.class 시큐리티 가본
                 .addFilterBefore(requsetIdFilter, UsernamePasswordAuthenticationFilter.class)
@@ -61,6 +66,10 @@ public class SecurityConfig {
 
                  //나머지 인증만 필요 (권한무관)
                 .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception->exception
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)//인증
+                        .accessDeniedHandler(accessDeniedHandler)//인가
                 )
                 //폼설정은 rest에서 사용안해
                 .formLogin(form->form
