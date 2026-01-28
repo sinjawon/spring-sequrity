@@ -6,7 +6,10 @@ import com.codeit.security.config.security.filtrt.RequsetLoggingFilter;
 import com.codeit.security.config.security.security.CustomAccessDeniedHandler;
 import com.codeit.security.config.security.security.CustomAuthenticationEntryPoint;
 import com.codeit.security.config.security.security.CustomUserDetailsService;
+import com.codeit.security.config.security.security.SpaCsrfTokenRequestHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
@@ -17,6 +20,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @RequiredArgsConstructor
@@ -27,6 +32,10 @@ public class SecurityConfig {
     private final RequsetLoggingFilter requsetLoggingFilter;
     private final IpCheckFilter ipCheckFilter;
     private final RequsetIdFilter requsetIdFilter;
+
+/*    @Autowired
+    @Qualifier("corsConfigSource")
+    private final CorsConfigurationSource corsConfigurationSource;*/
 
     //Spring Security Filter Chain 보안필터 체인을 구성하고 조리밯는역할 절차 규칙 설정
     //원하는 로직을 조리밯면된다
@@ -40,9 +49,14 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            RoleHierarchy roleHierarchy,
                                            CustomAccessDeniedHandler accessDeniedHandler,
-                                           CustomAuthenticationEntryPoint customAuthenticationEntryPoint) throws Exception {
+                                           CustomAuthenticationEntryPoint customAuthenticationEntryPoint,
+                                           @Qualifier("corsConfigSource") CorsConfigurationSource corsConfigurationSource
+                                           ) throws Exception {
 
         http     //인증 필터 로깅 동적잔에 필터 추가  UsernamePasswordAuthenticationFilter.class 시큐리티 가본
+                .cors(cors->cors
+                        .configurationSource(corsConfigurationSource)
+                )
                 .addFilterBefore(requsetIdFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(ipCheckFilter,RequsetIdFilter.class)
                 .addFilterAfter(requsetLoggingFilter, IpCheckFilter.class)
@@ -52,7 +66,7 @@ public class SecurityConfig {
                 .requestMatchers("/","/signup","/login").permitAll()
                 .requestMatchers("/css/**","/js/**","/public/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
-
+                .requestMatchers("/api/auth/csrf-token","/api/auth").permitAll()
                  //ADMIN 권한 필
                  //hasRole("ADMIN")" :"ROLE_ADMIN" 권한확인 -> 보통이넘을확용
                  //hasAuthority("ROLE_ADMIN"): 정확히 롤 언더바확인
@@ -80,7 +94,14 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")// 이넘이?
                         .permitAll())
                 //csrf도 사용하지않는다
-                .csrf(csrf->csrf.ignoringRequestMatchers("/h2-console/**"))
+                //csrf는 쿠키에 저장할꺼고
+                //프론트엔드에서 읽을수 있게 허용하겠다
+                .csrf(csrf->csrf
+                        .ignoringRequestMatchers("/h2-console/**")//hh2는 csrf검증제외
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())//쿠키에 저장&프론트에서 읽을수 있게 허용
+                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())//방금만헨들러등록
+
+                )
                 .headers(headers->headers
                 .frameOptions(frame-> frame.sameOrigin())
 
