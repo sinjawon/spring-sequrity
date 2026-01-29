@@ -42,3 +42,10 @@ logging:
 # Server
 server:
   port: 8080
+  servlet:
+    session:
+      timeout: 600s
+      cookie: #이 설정의 대상은 인증과정에서 생성되는 쿠키에 대한 설정 (모드ㄴ쿠키가아니다)
+        http-only: true  #자바ㅡ크맅브카 쿠키를 제어하지못하게 설정
+        secure: false # https가 아닌 환경에서 쿠키를 전송 여부
+        same-site: lax #csrf 방어

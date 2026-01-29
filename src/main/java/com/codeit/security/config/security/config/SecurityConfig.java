@@ -16,6 +16,8 @@ import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -32,6 +34,7 @@ public class SecurityConfig {
     private final RequsetLoggingFilter requsetLoggingFilter;
     private final IpCheckFilter ipCheckFilter;
     private final RequsetIdFilter requsetIdFilter;
+    private final SessionRegistry sessionRegistry;
 
 /*    @Autowired
     @Qualifier("corsConfigSource")
@@ -65,7 +68,7 @@ public class SecurityConfig {
                  //.anonymous()로그인하지 않은 사용자만 허용
                 .requestMatchers("/","/signup","/login").permitAll()
                 .requestMatchers("/css/**","/js/**","/public/**").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/h2-console/**","session-expired").permitAll()
                 .requestMatchers("/api/auth/csrf-token","/api/auth").permitAll()
                  //ADMIN 권한 필
                  //hasRole("ADMIN")" :"ROLE_ADMIN" 권한확인 -> 보통이넘을확용
@@ -103,7 +106,23 @@ public class SecurityConfig {
 
                 )
                 .headers(headers->headers
-                .frameOptions(frame-> frame.sameOrigin())
+                .frameOptions(frame-> frame.sameOrigin())//같은사이트에
+
+                )
+                .sessionManagement(session->session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .invalidSessionUrl("/session-expired")//세션만료시 이동할 url
+
+                        //동시성 관련 설정은 이 블록에서 진행
+                        .sessionConcurrency(concurrency->concurrency
+                                //한 사용자당 최대 세션수 한번에 한곳에 로그인가능하게 처리하겠다
+                                //-1은 무제한
+                                .maximumSessions(1)
+                                //false는 새 로그인 시 이전 세션 만료 ,true 이미 로그인 되어있다면 새 로그인 차단 웬만하면 false권장
+                                .maxSessionsPreventsLogin(false)
+                                .sessionRegistry(sessionRegistry)
+                                .expiredUrl("/session-expired")
+                        )
 
                 );
 

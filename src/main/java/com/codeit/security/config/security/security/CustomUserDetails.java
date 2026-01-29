@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 @Getter
 @RequiredArgsConstructor
@@ -44,5 +45,20 @@ public class CustomUserDetails implements UserDetails {
     //나중에 컨트롤러에서 필요할 때 진짜 유저 정보를 꺼내기 위한 getter
     public User getUser(){
         return user;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CustomUserDetails that = (CustomUserDetails) o;
+        // DB의 유니크한 ID나 username으로 비교
+        return Objects.equals(user.getUsername(), that.user.getUsername());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(user.getUsername());
     }
 }
